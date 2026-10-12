@@ -80,13 +80,22 @@ h2{font-family:var(--display);font-weight:400;font-size:30px;line-height:1;margi
 .lb-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--panel-2);border-radius:7px;padding:7px 10px;font-size:17px;font-weight:600}
 .lb-row.own{grid-template-columns:30px minmax(0,1fr) auto auto}
 .lb-row .pos{font-family:var(--display);font-size:14px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
-.lb-row.p1 .pos{color:#ffc21a}
-.lb-row.p2 .pos{color:#cfd8ee}
-.lb-row.p3 .pos{color:#e39a5c}
 .lb-row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb-row .you{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--orange);margin-left:6px}
 .lb-row .sc{font-family:var(--display);font-size:15px;font-variant-numeric:tabular-nums}
 .lb-row.me{box-shadow:inset 0 0 0 2px var(--orange)}
+/* Podium: gold, silver, bronze rows with a medal disc for the position; a crown on the leader. */
+.lb-row.p1{--medal:#f7c531;--medal-deep:#b8860b}
+.lb-row.p2{--medal:#d5dbe6;--medal-deep:#8a94a8}
+.lb-row.p3{--medal:#de8f4e;--medal-deep:#9a5a26}
+.lb-row.p1,.lb-row.p2,.lb-row.p3{background:linear-gradient(90deg,color-mix(in srgb,var(--medal) 30%,var(--panel-2)),var(--panel-2) 75%);box-shadow:inset 0 0 0 2px var(--medal)}
+.lb-row.p1 .pos,.lb-row.p2 .pos,.lb-row.p3 .pos{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#1a1408;font-size:13px;background:radial-gradient(circle at 35% 30%,#fff8 0,transparent 45%),var(--medal);box-shadow:inset 0 -2px 0 var(--medal-deep)}
+.lb-row.p1 .sc,.lb-row.p2 .sc,.lb-row.p3 .sc{color:var(--medal)}
+.lb-row.p1{padding-block:10px;font-size:18px}
+.lb-row.p1 .nm{color:#fff3c4}
+.crown{display:inline-block;width:22px;height:18px;vertical-align:-2px;margin-right:6px;filter:drop-shadow(0 0 6px rgba(247,197,49,.6))}
+@media (prefers-reduced-motion: no-preference){ .crown{animation:crown 2.4s ease-in-out infinite} }
+@keyframes crown{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-2px) rotate(6deg)}}
 .lb-gap{text-align:center;color:var(--muted);font-size:14px;line-height:1}
 .lb-note{margin:0;font-size:15px;color:var(--muted);line-height:1.3}
 .lb-note.strong{color:var(--ink);font-weight:600}
@@ -554,12 +563,30 @@ function initLB() {
   refreshBoard();
 }
 function myRank() { const r = LB.rows.find(x => x.pid && x.pid === LB.pid); return r ? r.rank : LB.rank; }
+function crownIcon() {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 20'); svg.setAttribute('class', 'crown');
+  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Leader');
+  const shapes = [
+    ['path', { d: 'M2 6l5 4.5L12 2l5 8.5L22 6l-2.2 10H4.2z', fill: '#f7c531', stroke: '#b8860b', 'stroke-width': '1.2', 'stroke-linejoin': 'round' }],
+    ['rect', { x: '4', y: '16.5', width: '16', height: '2.5', rx: '1', fill: '#e0a81e' }],
+    ['circle', { cx: '12', cy: '11', r: '1.6', fill: '#ff5470' }],
+    ['circle', { cx: '7.5', cy: '12.5', r: '1.1', fill: '#3d9bff' }],
+    ['circle', { cx: '16.5', cy: '12.5', r: '1.1', fill: '#2fd38a' }]
+  ];
+  for (const [tag, attrs] of shapes) { const el = document.createElementNS(NS, tag); for (const k in attrs) el.setAttribute(k, attrs[k]); svg.appendChild(el); }
+  return svg;
+}
 function lbRow(r) {
   const li = document.createElement('li');
   const mine = LB.pid && r.pid === LB.pid;
   li.className = 'lb-row' + (r.rank <= 3 ? ' p' + r.rank : '') + (mine ? ' me' : '');
   const p = document.createElement('span'); p.className = 'pos'; p.textContent = r.rank;
-  const n = document.createElement('span'); n.className = 'nm'; n.textContent = r.name;
+  if (r.rank <= 3) p.setAttribute('aria-label', ['1st place, gold', '2nd place, silver', '3rd place, bronze'][r.rank - 1]);
+  const n = document.createElement('span'); n.className = 'nm';
+  if (r.rank === 1) n.appendChild(crownIcon());
+  n.appendChild(document.createTextNode(r.name));
   if (mine) { const y = document.createElement('span'); y.className = 'you'; y.textContent = 'YOU'; n.appendChild(y); }
   if (r.sorted !== undefined) n.title = r.name + ' · ' + r.sorted + ' parcels · best combo ' + r.combo;
   const s = document.createElement('span'); s.className = 'sc'; s.textContent = Number(r.score).toLocaleString();
